@@ -12,7 +12,7 @@ export const WalletsPage: FC = () => {
   const { colors } = useTheme();
 
   const { wallets, totalBalance, isLoading: walletsLoading, addWallet } = useWallets();
-  const { totalIncome, isLoading: txLoading } = useTransactions();
+  const { transactions, totalIncome, totalExpense, isLoading: txLoading } = useTransactions();
 
   const isLoading = walletsLoading || txLoading;
 
@@ -36,14 +36,24 @@ export const WalletsPage: FC = () => {
         </p>
       ) : (
         <>
-          <TotalBalanceHero totalBalance={totalBalance} totalIncome={totalIncome} />
+          <TotalBalanceHero
+            totalBalance={totalBalance}
+            totalIncome={totalIncome}
+            totalExpense={totalExpense}
+          />
 
           {wallets.length === 0 ? (
             <p className="font-body text-sm text-center py-8" style={{ color: colors.textSecondary }}>
               Belum ada dompet. Tambahkan dompet pertamamu untuk mulai mencatat transaksi.
             </p>
           ) : (
-            wallets.map((wallet) => <WalletDetailCard key={wallet.id} wallet={wallet} />)
+            wallets.map((wallet) => (
+              <WalletDetailCard
+                key={wallet.id}
+                wallet={wallet}
+                transactions={transactions}
+              />
+            ))
           )}
         </>
       )}
