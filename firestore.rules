@@ -1,0 +1,71 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // users/{uid} — profile doc. A user can only read/write their own profile,
+    // and can never change their own uid via a write (the document ID is the source of truth).
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Shared rule for all per-user financial collections: every document must carry
+    // a userId field matching the signed-in user, both for reads and for writes
+    // (including the userId on create — this stops anyone from creating a document
+    // under someone else's userId).
+    match /wallets/{walletId} {
+      allow read, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == request.auth.uid;
+    }
+
+    match /income/{incomeId} {
+      allow read, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == request.auth.uid;
+    }
+
+    match /expenses/{expenseId} {
+      allow read, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == request.auth.uid;
+    }
+
+    match /goals/{goalId} {
+      allow read, delete: if request.auth != null && resource.data.ownerId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.ownerId == request.auth.uid;
+      allow update: if request.auth != null
+        && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == request.auth.uid;
+    }
+
+    // goal_contributions don't carry an ownerId of their own — ownership is
+    // determined transitively through the parent goal's ownerId.
+    match /goal_contributions/{contributionId} {
+      allow read, delete: if request.auth != null
+        && get(/databases/$(database)/documents/goals/$(resource.data.goalId)).data.ownerId == request.auth.uid;
+      allow create: if request.auth != null
+        && get(/databases/$(database)/documents/goals/$(request.resource.data.goalId)).data.ownerId == request.auth.uid;
+      allow update: if false; // contributions are immutable once created
+    }
+
+    match /budgets/{budgetId} {
+      allow read, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == request.auth.uid;
+    }
+
+    // Deny everything else by default.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
